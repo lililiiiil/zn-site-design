@@ -322,6 +322,8 @@ def main():
         p = (r.get("lone_pair_dev", 999) <= args.max_lp_dev
              and r.get("metal_fit_residual", 9) <= args.max_residual
              and r.get("angle_rmsd", 999) <= args.max_angle
+             # water_clash 는 측정불가일 때 -1 이다. '== 0' 이라야 그것도 함께
+             # 떨어진다. '<= 0' 으로 바꾸면 분류 실패한 모델이 통과해버린다.
              and r.get("water_clash", 9) == 0)
         if "coord_rmsd_vs_ref" in r:
             p = p and r["coord_rmsd_vs_ref"] <= args.max_rmsd
@@ -332,7 +334,7 @@ def main():
     # 콘솔 표
     cols = ["pdb", "coord_atoms", "coord_rmsd_vs_ref", "pair_dist_rmsd_vs_ref",
             "metal_fit_residual", "angle_rmsd", "lone_pair_dev", "water_clash",
-            "escape_frac", "shell_hbond_n", "metal_source", "pass"]
+            "escape_frac", "shell_hbond_n", "metal_source", "pass","nb_status"]
     cols = [c for c in cols if any(c in r for r in good)]
     w = {c: max(len(c), *(len(f"{r.get(c,''):.3f}") if isinstance(r.get(c), float)
               else len(str(r.get(c, ""))) for r in good)) for c in cols}
@@ -356,7 +358,7 @@ def main():
                    "water_clash", "water_min_dist", "water_blocker",
                    "shell_hbond_n", "shell_hbond_dist", "shell_hbond_angle",
                    "shell_hbond_resid", "pocket_hydrophobic", "pocket_polar",
-                   "pocket_ratio", "escape_frac", "metal_source", "pass"]
+                   "pocket_ratio", "escape_frac", "metal_source", "nb_status", "pass"]
         with open(args.out, "w", newline="") as fh:
             wtr = csv.DictWriter(fh, fieldnames=allcols, extrasaction="ignore")
             wtr.writeheader()

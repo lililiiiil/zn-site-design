@@ -292,10 +292,10 @@ def main():
     ap.add_argument("--sort-key", default="auto",
                     help="정렬 키 (기본: ref 있으면 coord_rmsd_vs_ref, 없으면 metal_fit_residual)")
     ap.add_argument("--max-rmsd", type=float, default=1.0, help="통과선: 배위원자 RMSD(Å)")
-    ap.add_argument("--max-residual", type=float, default=0.35, help="통과선: 금속 잔차(Å)")
-    ap.add_argument("--max-angle", type=float, default=20.0,
+    ap.add_argument("--max-residual", type=float, default=0.15, help="통과선: 금속 잔차(Å)")
+    ap.add_argument("--max-angle", type=float, default=12.0,
                     help="통과선: 각도 RMSD(도). apo/ref-free 모드에서 특히 중요")
-    ap.add_argument("--max-lp-dev", type=float, default=30.0,
+    ap.add_argument("--max-lp-dev", type=float, default=15.0,
                     help="통과선: 고립전자쌍 이탈 평균 각도(도). "
                          "※미보정 임시값 — native 2CBA 에서 재서 정할 것")
     ap.add_argument("--out", default=None, help="CSV 저장 경로")

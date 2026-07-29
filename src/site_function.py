@@ -29,6 +29,9 @@ HBOND_CUT = 3.4      # 2차 배위권 수소결합 상한(탄소기준)
 RAY_CUT = 2.8        # 광선이 원자에 이만큼 가까워지면 막힘
 SELF_TOL = 0.1       # 배위원자 자기 자신 판정 허용오차
 HYDROPHOBIC = {"ALA", "VAL", "LEU", "ILE", "PHE", "TRP", "MET", "PRO"}
+# DONOR_ATOMS 는 더 이상 쓰지 않는다. 원자 '이름' 목록은 공여체와 수용체를
+# 구분하지 못하고, 새 잔기가 나올 때마다 손으로 늘려야 한다.
+# 판정은 원소(N/O) + 기하(거리·각도)로만 한다. 참고용으로만 남긴다.
 DONOR_ATOMS = {"OG", "OG1", "OH", "ND1", "NE2", "OD1", "OD2", "OE1", "OE2", "N"}
 BACKBONE = {"N", "CA", "C", "O"}
 
@@ -52,8 +55,8 @@ def steric_cut(elem):
     표에 없는 원소는 탄소로 취급(가장 큰 유기 원소 쪽으로 보수적).
     기대값: C → 3.22 · N → 3.07 · O → 3.04 · S → 3.32
     """
-    elem.strip().upper()
-    # TODO(1줄)
+    # 정규화는 호출부(classify_neighbors)에서 한 번만 한다. 여기서 또 하면
+    # 규칙이 두 군데로 갈라진다. 직접 부를 땐 대문자 원소기호를 넘길 것.
     return R_WATER + VDW.get(elem, VDW["C"])
 
 def _label(a):
@@ -77,6 +80,12 @@ def _water_pos(coords, metal_xyz):
     return None if w is None else (metal_xyz + PROBE * w, w)
 
 
+def _coord_atom_mask(P, coords):
+    """P 각 행이 배위원자 자신인지 (N,) 불리언.
+    SELF_TOL 매칭 규칙은 이 함수 하나에만 있다."""
+    return np.linalg.norm(P[:, None, :] - coords[None, :, :], axis=2).min(1) <= SELF_TOL
+
+
 def _protein(atoms, coords, drop_self=True):
     """단백질 원자만. drop_self면 배위원자 자신은 뺀다."""
     prot = [a for a in atoms if a["rec"] == "ATOM"]
@@ -84,10 +93,24 @@ def _protein(atoms, coords, drop_self=True):
         return [], np.empty((0, 3))
     P = np.array([a["xyz"] for a in prot])
     if drop_self:
-        keep = np.linalg.norm(P[:, None, :] - coords[None, :, :], axis=2).min(1) > SELF_TOL
+        keep = ~_coord_atom_mask(P, coords)
         prot = [a for a, k in zip(prot, keep) if k]
         P = P[keep]
     return prot, P
+
+
+def coordinating_residues(atoms, coords):
+    """배위원자가 속한 잔기 (chain, resi) 집합.
+
+    왜 필요? 2차 배위권은 정의상 '배위에 관여하지 않는 별개 잔기'다.
+    His96 이 NE2 로 배위하면 ND1 은 2.2Å 옆에 남아 가상 물에서 2.6~3.1Å 에
+    앉는다. 원자 단위 제외로는 안 빠져서 '2차 배위권 파트너'로 세어진다.
+    """
+    prot, P = _protein(atoms, coords, drop_self=False)
+    if not prot:
+        return set()
+    mask = _coord_atom_mask(P, coords)
+    return {(a["chain"], a["resi"]) for a, k in zip(prot, mask) if k}
 
 # ── 통합 분류 ─────────────────────────────────────────────────────────
 def classify_neighbors(atoms, coords, metal_xyz):
@@ -125,68 +148,59 @@ def classify_neighbors(atoms, coords, metal_xyz):
     주의: 공여체 원자 '이름' 으로 거르지 않는다(DONOR_ATOMS). 이름 목록은
           공여체와 수용체를 구분 못 하고, 원소 + 기하가 더 정직하다.
     """
-    def empty(status):
-        return {"water_clash": -1, "water_min_dist": 99.0, "water_blocker": "undef",
-                "shell_hbond_n": 0, "shell_hbond_dist": 99.0,
-                "shell_hbond_angle": -1.0, "shell_hbond_resid": "",
-                "nb_status": status}
+    HEAVY_SKIP = {"H", "D"}
+
+    if not any(a["rec"] == "ATOM" for a in atoms):
+        return None                       # PDB 에 단백질 원자가 없음 = 파싱 실패 신호
 
     wp = _water_pos(coords, metal_xyz)
     if wp is None:
-        return empty("undef_direction")
+        return None                       # 4번째 꼭짓점 방향이 정의 안 됨
     wat, _ = wp
 
     # drop_self=True 는 선택이 아니라 필수.
     # 이상적 사면체에서 N···Owat = 3.31 Å (코사인법칙: 2.05 / 2.00 / 109.47°)
     # → HB_HI(3.4) 안쪽이라 배위 N 자신이 수소결합 파트너로 세어진다.
     prot, P = _protein(atoms, coords, drop_self=True)
-    if len(prot) == 0:
-        return empty("no_protein")
 
-    d = np.linalg.norm(P - wat, axis=1)
-
-    # 원소 문자열은 여기서 한 번만 해석한다. 두 군데서 각자 파싱하면
-    # 규칙이 갈라져서 is_polar 와 steric_cut 이 다른 원소로 판단할 수 있다.
-    elems = [(a.get("elem") or a["name"][0]).strip().upper() for a in prot]
-    is_polar = np.array([e in ("N", "O") for e in elems])
-
-    # 충돌 기준선. 극성 원자에는 vdW 합(3.04)을 쓰지 않는다.
-    # 수소결합 중원자 거리(2.6~2.8)가 vdW 합보다 작아서, H 를 명시적으로
-    # 안 다루는 모델에선 '겹쳤다'와 '수소결합 중이다'를 구분할 수 없다.
-    # → 극성은 HB_LO 미만만 충돌, 비극성은 vdW 합 적용.
-    cuts = np.where(is_polar, HB_LO, np.array([steric_cut(e) for e in elems]))
-    clash = d < cuts
-
-    # 수소결합 후보: 이름이 공여/수용 원자 + 거리 창.
-    # is_polar 는 여기 안 넣었다 — DONOR_ATOMS 원소가 전부 N/O 라 중복 조건이다.
-    is_donor = np.array([a["name"] in DONOR_ATOMS for a in prot])
-    hb_cand = is_donor & (d >= HB_LO) & (d <= HB_HI)
-
-    # 각도 창: Zn–Owat···X. wat 이 꼭짓점이므로 두 벡터 다 wat 기준.
     u = metal_xyz - wat
-    u = u / (np.linalg.norm(u) + 1e-9)
-    hb = []
-    for i in np.flatnonzero(hb_cand):
-        v = P[i] - wat
-        cos = float(u @ v / (np.linalg.norm(v) + 1e-9))
-        ang = float(np.degrees(np.arccos(np.clip(cos, -1, 1))))
-        if HB_ANG_LO <= ang <= HB_ANG_HI:
-            hb.append((float(d[i]), ang, prot[i]))
-    hb.sort(key=lambda h: h[0])
+    u = u / (np.linalg.norm(u) + 1e-9)    # Zn 방향 단위벡터. 각도의 기준축.
+    coord_res = coordinating_residues(atoms, coords)
 
-    i_worst = int(np.argmin(d - cuts))       # 기준선 대비 가장 심한 위반
-    return {
-        "water_clash": int(clash.sum()),
-        "water_min_dist": float(d.min()),
-        "water_blocker": (f"{_label(prot[i_worst])}/{prot[i_worst]['name']}"
-                          if clash.any() else ""),
-        "shell_hbond_n": len(hb),
-        "shell_hbond_dist": hb[0][0] if hb else 99.0,
-        "shell_hbond_angle": hb[0][1] if hb else -1.0,
-        "shell_hbond_resid": _label(hb[0][2]) if hb else "",
-        "nb_status": "",
-    }
+    clash, hbond, dists = [], [], []
+    for a, x in zip(prot, P):
+        is_coord = (a["chain"], a["resi"]) in coord_res
+        elem = (a.get("elem") or a["name"][0]).strip().upper()
+        if elem in HEAVY_SKIP:
+            continue                      # 수소는 vdW 표에 없어 전부 탄소로 폴백된다
+        d = float(np.linalg.norm(x - wat))
+        dists.append(d)
 
+        # (b) 수소결합 자격 심사. 통과하면 충돌 판정에서 '면제'된다.
+        #     면제는 원소가 주는 게 아니라 기하가 획득하는 것 — 이게 핵심이다.
+        #     원소로 무조건 면제하면 175°(친핵 공격 축)에 박힌 산소가
+        #     '막는 원자'가 아니라 '무관'으로 빠져나간다.
+        #     not is_coord: 2차 배위권은 정의상 '배위에 관여하지 않는 별개 잔기'다.
+        #     His96 이 NE2 로 배위하면 ND1 이 2.2Å 옆에 남아 파트너로 세어진다.
+        #     ※ 이 조건은 hbond 에만 붙고 clash 에는 일부러 안 붙인다.
+        #       배위 His 곁사슬이 물 자리를 막는 건 '배위 자리 붕괴'의 진짜 증거다.
+        if elem in ("N", "O") and not is_coord and HB_LO <= d <= HB_HI:
+            v = x - wat
+            cos = float(u @ v / (np.linalg.norm(v) + 1e-9))
+            ang = float(np.degrees(np.arccos(np.clip(cos, -1, 1))))
+            if HB_ANG_LO <= ang <= HB_ANG_HI:
+                hbond.append((d, ang, a))
+                continue                  # ← 이 continue 가 상호배타를 보장한다
+
+        # (c) 자격 미달이면 원소 그대로의 vdW 합으로 충돌 판정.
+        cut = steric_cut(elem)
+        if d < cut:
+            clash.append((d - cut, d, a))  # 침범량은 음수. 작을수록 깊이 박힌 것
+
+    clash.sort(key=lambda c: c[0])         # 침범량 오름차순 = 가장 깊은 것이 [0]
+    hbond.sort(key=lambda h: h[0])         # 거리 오름차순
+    return {"clash": clash, "hbond": hbond,
+            "min_dist": min(dists) if dists else 99.0}
 
 
 # ── 1. 촉매 물 자리 (재작성) ─────────────────────────────────────────
@@ -201,10 +215,24 @@ def water_site_open(nb):
       water_blocker    "THR199/OG1" 꼴 문자열. 충돌 없으면 "". 폴백이면 "undef"
                        → 가장 깊이 박힌 원자 하나. _label(atom) 을 쓸 것
 
-    (_label 은 renumber_site.py     의 +1000 오프셋을 되돌려준다)
-    """
+    (_label 은 renumber_site.py 의 +1000 오프셋을 되돌려준다)
 
-    return {k: nb[k] for k in ("water_clash", "water_min_dist", "water_blocker")}
+    ※ water_min_dist 폴백을 0.0 으로 두는 것은 원래 계약을 그대로 이은 것이다.
+      위험: 0.0 은 '가능한 최악의 충돌'과 값이 같아서, df[water_min_dist < X]
+      필터에 측정불가 행이 섞여 든다. 반대 방향으로 거를 거면 99.0 이 낫다.
+      필터 방향을 정하는 순간 여기도 같이 정할 것.
+    """
+    if nb is None:
+        return {"water_clash": -1, "water_min_dist": 0.0, "water_blocker": "undef"}
+    clash = nb["clash"]
+    return {
+        "water_clash": len(clash),
+        "water_min_dist": nb["min_dist"],
+        # clash 는 침범량 오름차순 → [0] 이 '가장 깊이 박힌' 원자.
+        # '가장 가까운' 원자가 아니다. 큰 원자가 살짝 닿은 것보다
+        # 작은 원자가 깊이 박힌 게 더 심각하기 때문.
+        "water_blocker": f"{_label(clash[0][2])}/{clash[0][2]['name']}" if clash else "",
+    }
 
 
 # ── 2. 2차 배위권 (재작성) ───────────────────────────────────────────
@@ -221,9 +249,13 @@ def second_shell(nb):
     2CBA 에서 shell_hbond_resid 가 THR199 로 안 나오면 구현이 틀린 것이다.
     이 한 줄이 전체 수정의 판정 기준.
     """
-
-    return {k: nb[k] for k in ("shell_hbond_n", "shell_hbond_dist",
-                               "shell_hbond_angle", "shell_hbond_resid")}
+    empty = {"shell_hbond_n": 0, "shell_hbond_dist": 99.0,
+             "shell_hbond_angle": -1.0, "shell_hbond_resid": ""}
+    if nb is None or not nb["hbond"]:
+        return empty
+    d0, ang0, a0 = nb["hbond"][0]          # 거리 오름차순 → 최근접 파트너
+    return {"shell_hbond_n": len(nb["hbond"]), "shell_hbond_dist": d0,
+            "shell_hbond_angle": ang0, "shell_hbond_resid": _label(a0)}
 
 # ── 3. 기질 포켓 ──────────────────────────────────────────────────────
 def substrate_pocket(atoms, coords, metal_xyz, rmin=4.0, rmax=8.0):
@@ -294,12 +326,11 @@ def function_metrics(atoms, coords, metal_xyz):
     out.update(second_shell(nb))
     out.update(substrate_pocket(atoms, coords, metal_xyz))
     out.update(solvent_access(atoms, coords, metal_xyz))
-    out["nb_status"] = nb["nb_status"]
+    # 분류 자체가 불가능했는지를 한 컬럼으로 남긴다. water_clash == -1 과
+    # 중복이지만, shell_hbond_n 은 '폴백'과 '진짜 2차 배위권 없음'이 둘 다 0 이라
+    # 값만으로 구분할 수 없다. 분석 전에 이 컬럼부터 세고 시작할 것.
+    out["nb_status"] = "" if nb is not None else "undef"
     return out
-
-
-# 파일 맨 아래 __main__ 의 cols 리스트에 "shell_hbond_angle" 을 넣을 것.
-# 지금은 빠져 있어서 2CBA 검증할 때 각도가 안 보인다.
 
 
 if __name__ == "__main__":
@@ -310,9 +341,11 @@ if __name__ == "__main__":
     site = [{"chain": "A", "resi": r, "resn": "HIS", "atom": "auto"}
             for r in (94, 96, 119)]
     cols = ["water_clash", "water_min_dist", "water_blocker",
-            "shell_hbond_n", "shell_hbond_dist", "shell_hbond_resid",
-            "pocket_ratio", "escape_frac","nb_status"]
+            "shell_hbond_n", "shell_hbond_dist", "shell_hbond_angle",
+            "shell_hbond_resid", "pocket_ratio", "escape_frac", "nb_status"]
     files = [f for p in sys.argv[1:] for f in sorted(glob.glob(p))]
+    if not files:
+        sys.exit("입력 PDB 없음.  사용:  python site_function.py <renum.pdb> ...")
     print(f"{'pdb':24s} " + " ".join(c[:11].rjust(11) for c in cols))
     for f in files:
         fit = resolve_site(parse_pdb(f), site, metal_xyz=find_metal(parse_pdb(f)))

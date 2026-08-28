@@ -1,0 +1,20 @@
+# 저장소에는 LF, 체크아웃 시 플랫폼 기본(윈도우=CRLF)
+* text=auto
+
+# 구조/서열 데이터 - 텍스트로 정규화
+*.pdb  text
+*.cif  text
+*.a3m  text
+*.csv  text
+*.json text
+*.py   text
+
+# 실행 스크립트 - 줄바꿈 고정
+*.ps1  text eol=crlf
+*.sh   text eol=lf
+
+# 바이너리
+*.zip  binary
+*.pt   binary
+*.pth  binary
+*.ipynb text

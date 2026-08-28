@@ -237,12 +237,12 @@ def find_metal(atoms):
     return None
 
 # ── 한 설계 채점 ──────────────────────────────────────────────────────
-def score_one(path, site, ref=None):
+def score_one(path, site, ref=None, force_virtual=False):
     atoms = parse_pdb(path)
     r = {"pdb":os.path.basename(path)}
 
     fit = resolve_site(atoms, site["coordinators"],
-                       metal_xyz=find_metal(atoms),
+                       metal_xyz=None if force_virtual else find_metal(atoms),
                        ideal_dist=site.get("ideal_dist"))
     r["ok"] = fit is not None
     if not r["ok"]:
@@ -299,6 +299,8 @@ def main():
     ap.add_argument("--max-lp-dev", type=float, default=15.0,
                     help="통과선: 고립전자쌍 이탈 평균 각도(도). "
                          "※미보정 임시값 — native 2CBA 에서 재서 정할 것")
+    ap.add_argument("--virtual", action="store_true",
+                    help="HETATM 금속을 무시하고 가상 금속으로 채점 (AF2 모드 예행)")
     ap.add_argument("--out", default=None, help="CSV 저장 경로")
     args = ap.parse_args()
 
@@ -306,7 +308,7 @@ def main():
     ref = build_ref(args.ref, site) if args.ref else None
     files = [f for pat in args.pdbs for f in sorted(glob.glob(pat))] or args.pdbs
 
-    rows = [score_one(f, site, ref) for f in files]
+    rows = [score_one(f, site, ref, force_virtual=args.virtual) for f in files]
     good = [r for r in rows if r.get("ok")]
 
     if not good:

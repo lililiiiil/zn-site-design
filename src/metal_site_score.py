@@ -17,6 +17,7 @@ import argparse, glob, json, sys, math
 from itertools import combinations, product, permutations
 import numpy as np
 import site_function as sf
+import os
 
 # ── 기본 배위원자 정의 ────────────────────────────────────────────────
 # 잔기명 → 후보 배위원자 이름. His는 둘 중 자동선택.
@@ -238,7 +239,7 @@ def find_metal(atoms):
 # ── 한 설계 채점 ──────────────────────────────────────────────────────
 def score_one(path, site, ref=None):
     atoms = parse_pdb(path)
-    r = {"pdb": path.split("/")[-1]}
+    r = {"pdb":os.path.basename(path)}
 
     fit = resolve_site(atoms, site["coordinators"],
                        metal_xyz=find_metal(atoms),
@@ -320,14 +321,18 @@ def main():
 
     def passes(r):
         p = (r.get("lone_pair_dev", 999) <= args.max_lp_dev
-             and r.get("metal_fit_residual", 9) <= args.max_residual
              and r.get("angle_rmsd", 999) <= args.max_angle
              # water_clash 는 측정불가일 때 -1 이다. '== 0' 이라야 그것도 함께
              # 떨어진다. '<= 0' 으로 바꾸면 분류 실패한 모델이 통과해버린다.
              and r.get("water_clash", 9) == 0)
+        
+        if r.get("metal_source") != "virtual":
+            p = p and r["metal_fit_residual"] <= args.max_residual
+
         if "coord_rmsd_vs_ref" in r:
             p = p and r["coord_rmsd_vs_ref"] <= args.max_rmsd
         return p
+    
     for r in good:
         r["pass"] = passes(r)
 

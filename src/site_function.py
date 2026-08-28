@@ -32,7 +32,7 @@ HYDROPHOBIC = {"ALA", "VAL", "LEU", "ILE", "PHE", "TRP", "MET", "PRO"}
 # DONOR_ATOMS 는 더 이상 쓰지 않는다. 원자 '이름' 목록은 공여체와 수용체를
 # 구분하지 못하고, 새 잔기가 나올 때마다 손으로 늘려야 한다.
 # 판정은 원소(N/O) + 기하(거리·각도)로만 한다. 참고용으로만 남긴다.
-DONOR_ATOMS = {"OG", "OG1", "OH", "ND1", "NE2", "OD1", "OD2", "OE1", "OE2", "N"}
+
 BACKBONE = {"N", "CA", "C", "O"}
 
 
@@ -62,6 +62,7 @@ def steric_cut(elem):
 def _label(a):
     """잔기 라벨. renumber_site.py 의 +1000 오프셋을 되돌려 표시."""
     r = a["resi"]
+    n = a["name"]
     return f"{a['resn']}{r - 1000 if r > 1000 else r}"
 
 
@@ -156,7 +157,7 @@ def classify_neighbors(atoms, coords, metal_xyz):
     wp = _water_pos(coords, metal_xyz)
     if wp is None:
         return None                       # 4번째 꼭짓점 방향이 정의 안 됨
-    wat, _ = wp
+    wat, _ = wp  # wat — 가상 물 위치. 배위원자 3개 방향의 합을 뒤집어서 금속에서 2.0 Å 떨어진 지점. 4번째 배위 자리
 
     # drop_self=True 는 선택이 아니라 필수.
     # 이상적 사면체에서 N···Owat = 3.31 Å (코사인법칙: 2.05 / 2.00 / 109.47°)
@@ -173,6 +174,7 @@ def classify_neighbors(atoms, coords, metal_xyz):
         elem = (a.get("elem") or a["name"][0]).strip().upper()
         if elem in HEAVY_SKIP:
             continue                      # 수소는 vdW 표에 없어 전부 탄소로 폴백된다
+        # d = 그 단백질 원자 x에서 가상 물까지의 거리
         d = float(np.linalg.norm(x - wat))
         dists.append(d)
 
@@ -193,8 +195,9 @@ def classify_neighbors(atoms, coords, metal_xyz):
                 continue                  # ← 이 continue 가 상호배타를 보장한다
 
         # (c) 자격 미달이면 원소 그대로의 vdW 합으로 충돌 판정.
+        # cut = 원소 기준 충돌 하한 
         cut = steric_cut(elem)
-        if d < cut:
+        if d < cut: # 겹침, 침범량
             clash.append((d - cut, d, a))  # 침범량은 음수. 작을수록 깊이 박힌 것
 
     clash.sort(key=lambda c: c[0])         # 침범량 오름차순 = 가장 깊은 것이 [0]
@@ -254,8 +257,9 @@ def second_shell(nb):
     if nb is None or not nb["hbond"]:
         return empty
     d0, ang0, a0 = nb["hbond"][0]          # 거리 오름차순 → 최근접 파트너
+    #가상 물의 수소결합 파트너 중 가장 가까운 것의 잔기 라벨
     return {"shell_hbond_n": len(nb["hbond"]), "shell_hbond_dist": d0,
-            "shell_hbond_angle": ang0, "shell_hbond_resid": _label(a0)}
+            "shell_hbond_angle": ang0, "shell_hbond_resid":f"{_label(a0)}/{a0['name']}"}
 
 # ── 3. 기질 포켓 ──────────────────────────────────────────────────────
 def substrate_pocket(atoms, coords, metal_xyz, rmin=4.0, rmax=8.0):
@@ -329,7 +333,7 @@ def function_metrics(atoms, coords, metal_xyz):
     # 분류 자체가 불가능했는지를 한 컬럼으로 남긴다. water_clash == -1 과
     # 중복이지만, shell_hbond_n 은 '폴백'과 '진짜 2차 배위권 없음'이 둘 다 0 이라
     # 값만으로 구분할 수 없다. 분석 전에 이 컬럼부터 세고 시작할 것.
-    out["nb_status"] = "" if nb is not None else "undef"
+    out["nb_status"] = "ok" if nb is not None else "undef"
     return out
 
 

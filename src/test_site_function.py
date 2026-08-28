@@ -186,7 +186,7 @@ def native_check(path):
     print(f"  water_blocker      {r['water_blocker'] or '(없음)'}")
     print(f"  water_min_dist     {r['water_min_dist']:.2f} Å")
     print(f"  shell_hbond_n      {r['shell_hbond_n']}        기대: >= 1")
-    print(f"  shell_hbond_resid  {r['shell_hbond_resid']}   기대: THR199")
+    print(f"  shell_hbond_resid  {r['shell_hbond_resid']}    THR199/OG1")
     print(f"  shell_hbond_dist   {r['shell_hbond_dist']:.2f} Å   참고: 2.6~3.0")
     print(f"  shell_hbond_angle  {r['shell_hbond_angle']:.1f}°   참고: 100~120")
     print(f"  escape_frac        {r['escape_frac']:.3f}")

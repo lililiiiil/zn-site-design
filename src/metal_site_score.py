@@ -18,6 +18,7 @@ from itertools import combinations, product, permutations
 import numpy as np
 import site_function as sf
 import os
+import gemmi
 
 # ── 기본 배위원자 정의 ────────────────────────────────────────────────
 # 잔기명 → 후보 배위원자 이름. His는 둘 중 자동선택.
@@ -38,7 +39,7 @@ METAL_NAMES = {"ZN", "FE", "CU", "NI", "MN", "CO", "MG", "CA"}  # HETATM 금속 
 # ── 초경량 PDB 파서 ───────────────────────────────────────────────────
 def parse_pdb(path):
     """ATOM/HETATM 레코드 → dict 리스트. altloc은 첫 등장(또는 'A')만."""
-    atoms = []
+    atoms = []  
     with open(path) as fh:
         for ln in fh:
             rec = ln[:6].strip()
@@ -57,6 +58,41 @@ def parse_pdb(path):
                 "elem": (ln[76:78].strip() or ln[12:16].strip()[0]).upper(),
             })
     return atoms
+
+
+def parse_cif(path):
+    """mmCIF(OF3/AF3 출력) → parse_pdb 와 동일한 dict 리스트.
+
+    parse_pdb 와 거동을 맞추기 위한 세 가지 — 지우지 말 것:
+      - altloc: gemmi 는 대안이 없을 때 빈 문자열이 아니라 널 문자('\\x00')를 준다.
+        ("", "A") 로 거르면 모든 원자가 탈락해 조용히 빈 리스트가 나온다.
+      - elem: gemmi 는 'Zn', PDB 경로는 'ZN' → upper() 로 정규화해야 두 경로가 같아진다.
+      - st[0]: 첫 모델만. 여러 모델을 돌면 같은 원자가 중복되어 모든 거리가 깨진다.
+    """
+    st = gemmi.read_structure(path)
+    result = []
+    for cra in st[0].all():            # chain·residue·atom을 한 번에
+        if cra.atom.altloc not in ("\x00", "A"):
+            continue
+        result.append({
+            "rec":   "HETATM" if cra.residue.het_flag == "H" else "ATOM",
+            "name":  cra.atom.name,
+            "resn":  cra.residue.name,
+            "chain": cra.chain.name,
+            "resi":  cra.residue.seqid.num,
+            "xyz":   np.array([cra.atom.pos.x, cra.atom.pos.y, cra.atom.pos.z]),
+            "elem":  cra.atom.element.name.upper(),
+            "plddt": cra.atom.b_iso,
+        })
+    return result
+
+
+def read_atoms(path):
+    """확장자로 파서를 고른다. 규칙을 여기 한 군데에만 둔다 —
+    호출부(score_one, build_ref)에 if 를 복사하면 한쪽만 고치게 된다."""
+    ext = os.path.splitext(path)[1].lower()   # .CIF 처럼 대문자로 오는 경우 대비
+    return parse_cif(path) if ext in (".cif", ".mmcif") else parse_pdb(path)
+
 
 def element_of(atom_name):
     """원자 이름에서 원소 추정 (배위 거리 lookup용)."""
@@ -238,7 +274,7 @@ def find_metal(atoms):
 
 # ── 한 설계 채점 ──────────────────────────────────────────────────────
 def score_one(path, site, ref=None, force_virtual=False):
-    atoms = parse_pdb(path)
+    atoms = read_atoms(path)
     r = {"pdb":os.path.basename(path)}
 
     fit = resolve_site(atoms, site["coordinators"],
@@ -273,7 +309,7 @@ def score_one(path, site, ref=None, force_virtual=False):
 
 
 def build_ref(path, site):
-    atoms = parse_pdb(path)
+    atoms = read_atoms(path)
     fit = resolve_site(atoms, site["coordinators"], metal_xyz=find_metal(atoms),
                        ideal_dist=site.get("ideal_dist"))
     if fit is None:

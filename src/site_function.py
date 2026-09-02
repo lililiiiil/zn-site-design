@@ -203,7 +203,8 @@ def classify_neighbors(atoms, coords, metal_xyz):
     clash.sort(key=lambda c: c[0])         # 침범량 오름차순 = 가장 깊은 것이 [0]
     hbond.sort(key=lambda h: h[0])         # 거리 오름차순
     return {"clash": clash, "hbond": hbond,
-            "min_dist": min(dists) if dists else 99.0}
+            "min_dist": min(dists) if dists else 99.0,
+            "wat": wat}                    # 물 좌표를 밖으로. probe_distance 가 쓴다.
 
 
 # ── 1. 촉매 물 자리 (재작성) ─────────────────────────────────────────
@@ -260,6 +261,43 @@ def second_shell(nb):
     #가상 물의 수소결합 파트너 중 가장 가까운 것의 잔기 라벨
     return {"shell_hbond_n": len(nb["hbond"]), "shell_hbond_dist": d0,
             "shell_hbond_angle": ang0, "shell_hbond_resid":f"{_label(a0)}/{a0['name']}"}
+
+# ── 2b. 지정 잔기 ↔ 물 자리 거리 ────────────────────────────────────
+def probe_distance(nb, atoms, site):
+    """site["probe"] 로 지정한 원자에서 가상 물 자리까지의 거리. 창 조건 없이 무조건 잰다.
+
+    second_shell 과 다른 점 — 이게 이 함수의 존재 이유다:
+      second_shell 은 HB_LO~HB_HI(2.4~3.4Å) 창 안에 든 원자만 파트너로 센다.
+      Thr112 가 4.83Å 로 밀려나면 창 밖이라 잡히지 않고 shell_hbond_dist 는
+      폴백 99.0 을 준다. '얼마나 밀려났나'를 재려면 무조건 재는 값이 필요하다.
+      (3라 과정.md: AF3 예측 45개 전부 이탈, 최선 4.83Å, 3Å 근처 0개)
+
+    잔기 번호를 하드코딩하지 않는다 — native 199, 설계 112, 다음 라운드엔 또 다르다.
+    원자 이름도 JSON 에서 읽는다. Thr 이면 OG1 이지만 Ser(OG)/Tyr(OH) 로 바뀔 수 있고,
+    코드가 잔기명을 보고 추측하게 만들면 그 추측이 조용히 틀린다.
+
+    반환 키(폴백값):
+      probe_dist   float. 잴 수 없으면 "" (빈 문자열)
+      probe_resid  "THR199/OG1" 꼴. probe 미설정이면 "", 잔기를 못 찾으면 "missing"
+
+    ※ 폴백을 숫자 센티널로 두지 않는 이유: 08-28 에 shell_hbond_dist 폴백 99.0 이
+      최대차 96.5 를 만들어 숫자 비교를 오염시킨 것이 실증됐다. 빈 문자열은
+      pandas 에서 NaN 이 되어 숫자 연산에서 자동으로 빠진다.
+      probe_resid 가 "" 인지 "missing" 인지로 '설정 안 함'과 '못 찾음'을 구분한다.
+    """
+    empty = {"probe_dist": "", "probe_resid": ""}
+    p = site.get("probe") if isinstance(site, dict) else None
+    if not p:
+        return empty                       # probe 미설정 — 옛 site JSON 과 호환
+    if nb is None:
+        return {"probe_dist": "", "probe_resid": "undef"}   # 물 자리가 정의 안 됨
+    want = (p["chain"], int(p["resi"]), p["atom"])
+    for a in atoms:
+        if a["rec"] == "ATOM" and (a["chain"], a["resi"], a["name"]) == want:
+            return {"probe_dist": float(np.linalg.norm(a["xyz"] - nb["wat"])),
+                    "probe_resid": f"{_label(a)}/{a['name']}"}
+    return {"probe_dist": "", "probe_resid": "missing"}
+
 
 # ── 3. 기질 포켓 ──────────────────────────────────────────────────────
 def substrate_pocket(atoms, coords, metal_xyz, rmin=4.0, rmax=8.0):
@@ -323,11 +361,12 @@ def solvent_access(atoms, coords, metal_xyz, n_rays=128, reach=10.0, step=0.5):
 
 
 # ── 통합  ─────────────────────────────────
-def function_metrics(atoms, coords, metal_xyz):
+def function_metrics(atoms, coords, metal_xyz, site):
     nb = classify_neighbors(atoms, coords, metal_xyz)
     out = {}
     out.update(water_site_open(nb))
     out.update(second_shell(nb))
+    out.update(probe_distance(nb, atoms, site))
     out.update(substrate_pocket(atoms, coords, metal_xyz))
     out.update(solvent_access(atoms, coords, metal_xyz))
     # 분류 자체가 불가능했는지를 한 컬럼으로 남긴다. water_clash == -1 과
@@ -342,23 +381,29 @@ if __name__ == "__main__":
     sys.path.insert(0, ".")
     from metal_site_score import parse_pdb, resolve_site, find_metal
 
-    site = [{"chain": "A", "resi": r, "resn": "HIS", "atom": "auto"}
-            for r in (94, 96, 119)]
+    # score_one 과 같은 모양(dict)으로 둔다. 예전엔 여기만 coordinators 리스트라
+    # 같은 이름 site 가 두 군데서 다른 물건이었다 — function_metrics 가 site 를
+    # 받게 되면서 그 불일치가 터진다.
+    site = {"coordinators": [{"chain": "A", "resi": r, "resn": "HIS", "atom": "auto"}
+                             for r in (94, 96, 119)],
+            "probe": {"chain": "A", "resi": 199, "atom": "OG1"}}   # native 2CBA 기준
     cols = ["water_clash", "water_min_dist", "water_blocker",
             "shell_hbond_n", "shell_hbond_dist", "shell_hbond_angle",
-            "shell_hbond_resid", "pocket_ratio", "escape_frac", "nb_status"]
+            "shell_hbond_resid", "probe_dist", "probe_resid",
+            "pocket_ratio", "escape_frac", "nb_status"]
     files = [f for p in sys.argv[1:] for f in sorted(glob.glob(p))]
     if not files:
         sys.exit("입력 PDB 없음.  사용:  python site_function.py <renum.pdb> ...")
     print(f"{'pdb':24s} " + " ".join(c[:11].rjust(11) for c in cols))
     for f in files:
-        fit = resolve_site(parse_pdb(f), site, metal_xyz=find_metal(parse_pdb(f)))
+        fit = resolve_site(parse_pdb(f), site["coordinators"],
+                           metal_xyz=find_metal(parse_pdb(f)))
         if fit is None:
             print(f"{f.split('/')[-1]:24s} 배위원자 없음")
             continue
         # 폴백이던 coords.mean(0) 은 제거 — 중심점은 금속 위치가 아니다.
         # 그게 fit_virtual_metal 평면갇힘 버그의 원형이었다.
-        r = function_metrics(parse_pdb(f), fit["coords"], fit["metal"])
+        r = function_metrics(parse_pdb(f), fit["coords"], fit["metal"], site)
         cells = []
         for c in cols:
             v = r.get(c, "")

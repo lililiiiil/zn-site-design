@@ -291,7 +291,7 @@ def score_one(path, site, ref=None, force_virtual=False):
     r["lone_pair_dev"]      = fit["lp_dev"]            # 진짜 배위 자리인가
 
     # (E) 기능 레이어 — m 이 평면 밖 올바른 위치라야 물 자리가 제대로 잡힌다
-    r.update(sf.function_metrics(atoms, coords, m))
+    r.update(sf.function_metrics(atoms, coords, m, site))
 
     # (A)(B)(D) — ref 가 있으면 대응 순열을 먼저 확정하고 '그 순서로' 전부 계산.
     # angle_rmsd 를 이 분기 안으로 옮긴 게 핵심. 기존엔 순열 확정 전에 계산됐다.
@@ -400,7 +400,8 @@ def main():
                    "metal_fit_residual", "angle_rmsd", "lone_pair_dev",
                    "water_clash", "water_min_dist", "water_blocker",
                    "shell_hbond_n", "shell_hbond_dist", "shell_hbond_angle",
-                   "shell_hbond_resid", "pocket_hydrophobic", "pocket_polar",
+                   "shell_hbond_resid", "probe_dist", "probe_resid",
+                   "pocket_hydrophobic", "pocket_polar",
                    "pocket_ratio", "escape_frac", "metal_source", "nb_status", "pass"]
         with open(args.out, "w", newline="") as fh:
             wtr = csv.DictWriter(fh, fieldnames=allcols, extrasaction="ignore")

@@ -375,9 +375,12 @@ def main():
         r["pass"] = passes(r)
 
     # 콘솔 표
-    cols = ["pdb", "coord_atoms", "coord_rmsd_vs_ref", "pair_dist_rmsd_vs_ref",
-            "metal_fit_residual", "angle_rmsd", "lone_pair_dev", "water_clash",
-            "escape_frac", "shell_hbond_n", "metal_source", "pass","nb_status"]
+    cols = ["pdb","nb_status","probe_dist","probe_resid", "coord_atoms",
+            "coord_rmsd_vs_ref", "pair_dist_rmsd_vs_ref","metal_fit_residual",
+            "angle_rmsd", "lone_pair_dev", "water_clash","escape_frac",
+              "shell_hbond_n", "metal_source", "pass"]
+
+    
     cols = [c for c in cols if any(c in r for r in good)]
     w = {c: max(len(c), *(len(f"{r.get(c,''):.3f}") if isinstance(r.get(c), float)
               else len(str(r.get(c, ""))) for r in good)) for c in cols}

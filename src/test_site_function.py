@@ -15,7 +15,7 @@ Zn 을 원점에 놓고 이상적 사면체를 세우면 가상 물이 정확히
 import sys
 import numpy as np
 import site_function as sf
-
+import json
 PASS, FAIL = [], []
 
 
@@ -170,6 +170,9 @@ def test_undefined_water_fallback():
 # ── native 검수 ───────────────────────────────────────────────────────
 def native_check(path):
     from metal_site_score import parse_pdb, resolve_site, find_metal
+
+    json_site = json.load(open("zn_site_native.json"))
+    
     site = [{"chain": "A", "resi": r, "resn": "HIS", "atom": "auto"}
             for r in (94, 96, 119)]
     atoms = parse_pdb(path)
@@ -178,7 +181,7 @@ def native_check(path):
         print(f"\n[native] 배위원자 추출 실패: {path}")
         print("  → renumber_site.py 를 먼저 돌렸는지 확인")
         return
-    r = sf.function_metrics(atoms, fit["coords"], fit["metal"])
+    r = sf.function_metrics(atoms, fit["coords"], fit["metal"], json_site)
 
     print(f"\n── native 검수: {path} " + "─" * 30)
     print(f"  metal_source       {fit['source']}")
@@ -191,10 +194,27 @@ def native_check(path):
     print(f"  shell_hbond_angle  {r['shell_hbond_angle']:.1f}°   참고: 100~120")
     print(f"  escape_frac        {r['escape_frac']:.3f}")
     print(f"  pocket_ratio       {r['pocket_ratio']:.3f}")
+    # probe_dist 는 잴 수 없으면 "" 를 돌려준다. :.2f 를 바로 붙이면 터진다.
+    _pd = (f"{r['probe_dist']:.2f}" if isinstance(r["probe_dist"], float)
+           else f"{r['probe_dist']!r}")
+    print(f"  probe_dist         {_pd} Å   기대: 3.07")
+    print(f"  probe_resid        {r['probe_resid']}    기대: THR199/OG1")
 
     check("native: Thr199 가 2차 배위권으로 검출됨",
           "199" in str(r["shell_hbond_resid"]),
           f"실제 = {r['shell_hbond_resid']!r}")
+
+    # probe 는 두 가지가 따로 깨진다. resid 는 '무엇을 쟀나', dist 는 '값이 맞나'.
+    # resid 만 보면 계산이 틀어져도 통과하고, dist 만 보면 엉뚱한 잔기를 재도 통과한다.
+    check("native: probe 가 THR199/OG1 에서 측정됨",
+          r["probe_resid"] == "THR199/OG1",
+          f"실제 = {r['probe_resid']!r} (빈 문자열이면 site 가 dict 로 안 넘어온 것)")
+
+    # 결정구조 채점은 샘플링이 없어 결정론적이다. 허용오차는 문서 4.4 의
+    # 반올림값(3.07)과 실측(3.0658)의 차 0.0042 를 덮을 만큼만 준다.
+    check("native: probe_dist 가 3.07 Å (문서 4.4)",
+          isinstance(r["probe_dist"], float) and abs(r["probe_dist"] - 3.07) < 0.01,
+          f"실제 = {r['probe_dist']!r}")
 
     print("\n  ※ 거리·각도는 합격/불합격이 아니라 '실측값'이다.")
     print("    HB_LO/HB_HI/HB_ANG_* 와 --max-lp-dev 를 이 숫자로 다시 정할 것.")

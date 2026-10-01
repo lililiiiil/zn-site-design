@@ -1,0 +1,64 @@
+group,metric,value,unit_n,source_note,recompute_input,recompute_method,status
+seed_variance,sigma_within_id2,3.09,"lp_dev, 25 models",7라#lone_pair_dev 분산 분해,results/r7/scores_r7_seedvar_2026-09-23.csv + results/r6/scores_r6_day1_2026-09-21.csv,"시드별 5모델 SD를 시드 5개에 대해 pooled",recomputable
+seed_variance,sigma_between_id2,1.07,"lp_dev, 5 seeds",7라#lone_pair_dev 분산 분해,동일,"시드별 5모델 평균들의 SD",recomputable
+seed_variance,sigma_within_id9,7.12,"lp_dev, 25 models",7라#lone_pair_dev 분산 분해,동일,동일,recomputable
+seed_variance,sigma_between_id9,6.01,"lp_dev, 5 seeds",7라#lone_pair_dev 분산 분해,동일,동일,recomputable
+seed_variance,sigma_within_id7,6.56,"lp_dev, 25 models",7라#lone_pair_dev 분산 분해,동일,동일,recomputable
+seed_variance,sigma_between_id7,11.67,"lp_dev, 5 seeds",7라#lone_pair_dev 분산 분해,동일,동일,recomputable
+seed_variance,sigma_within_pooled,5.87,"lp_dev, 75 models",7라#lone_pair_dev 분산 분해,동일,"서열 3개 pooled",recomputable
+seed_variance,sigma_between_pooled,7.60,"lp_dev, 15 seeds",7라#lone_pair_dev 분산 분해,동일,동일,recomputable
+seed_variance,design_sd,8.49,"lp_dev, 16 designs",7라#★ 시드 1개로는 설계를 구분할 수 없다,results/r6/scores_r6_day1_2026-09-21.csv,"갈래C 16설계 평균들의 SD",recomputable
+seed_variance,SE_k1,8.04,lp_dev,7라#★ 시드 1개로는 설계를 구분할 수 없다,—,"SE = sqrt(sigma_b^2/k + sigma_w^2/(5k)), k=1",derived
+seed_variance,sigma_within_water_min_dist,0.58,25 models,7라#지표별 시드 민감도,동일 2개 CSV,동일 분해,recomputable
+seed_variance,sigma_between_water_min_dist,0.46,5 seeds,7라#지표별 시드 민감도,동일,동일,recomputable
+seed_variance,sigma_within_water_clash,1.12,25 models,7라#지표별 시드 민감도,동일,동일,recomputable
+seed_variance,sigma_between_water_clash,0.87,5 seeds,7라#지표별 시드 민감도,동일,동일,recomputable
+seed_variance,sigma_within_probe_dist,1.73,25 models,7라#지표별 시드 민감도,동일,동일,recomputable
+seed_variance,sigma_between_probe_dist,1.58,5 seeds,7라#지표별 시드 민감도,동일,동일,recomputable
+seed_variance,sigma_within_angle_rmsd,4.96,25 models,7라#지표별 시드 민감도,동일,동일,recomputable
+seed_variance,sigma_between_angle_rmsd,8.18,5 seeds,7라#지표별 시드 민감도,동일,동일,recomputable
+self_consistency,scRMSD_median,1.45,"Angstrom, 80 models",7라#★ 표준 de novo 지표로는 이미 통과한다,af3/r6_day1/*.cif + design/round_6/r6_b1_m0_ala104.pdb,"전체 CA Kabsch 정렬 후 RMSD. 도구 미기록",NO_CSV
+self_consistency,scRMSD_range,0.76~2.88,"Angstrom, 80 models",7라#★ 표준 de novo 지표로는 이미 통과한다,동일,동일,NO_CSV
+self_consistency,scRMSD_lt_2.0,70/80,models,7라#★ 표준 de novo 지표로는 이미 통과한다,동일,동일,NO_CSV
+self_consistency,pLDDT_median,88.4,80 models,7라#★ 표준 de novo 지표로는 이미 통과한다,af3/r6_day1/ summary_confidences JSON,"모델별 평균 pLDDT",NO_CSV
+self_consistency,pLDDT_range,81.3~90.9,80 models,7라#★ 표준 de novo 지표로는 이미 통과한다,동일,동일,NO_CSV
+self_consistency,pLDDT_gt_80,80/80,models,7라#★ 표준 de novo 지표로는 이미 통과한다,동일,동일,NO_CSV
+self_consistency,rho_scRMSD_vs_lp_dev,+0.000 (p=0.999),80 models,7라#★ 표준 de novo 지표로는 이미 통과한다,위 두 입력,Spearman,NO_CSV
+self_consistency,rho_scRMSD_vs_water_clash,-0.133 (p=0.24),80 models,7라#★ 표준 de novo 지표로는 이미 통과한다,동일,Spearman,NO_CSV
+self_consistency,rho_pLDDT_vs_lp_dev,-0.402 (p=0.0002),80 models,7라#★ 표준 de novo 지표로는 이미 통과한다,동일,Spearman,NO_CSV
+sidechain_drift,coord_His_CA_drift_mean,0.66,"Angstrom, 80 models",6라#1차 배위권과 백본 — 주쇄는 맞다,af3/r6_day1/*.cif + design/round_6/r6_b1_m0_ala104.pdb,"전체 CA Kabsch 정렬 후 His95/97/120 CA 거리",NO_CSV
+sidechain_drift,coord_His_CA_drift_range,0.43~0.98,"Angstrom, 80 models",6라#1차 배위권과 백본 — 주쇄는 맞다,동일,동일,NO_CSV
+sidechain_drift,coord_His_CB_drift_mean,1.07,"Angstrom, 80 models",6라#1차 배위권과 백본 — 주쇄는 맞다,동일,동일 (CB),NO_CSV
+sidechain_drift,coord_His_CB_drift_range,0.60~1.53,"Angstrom, 80 models",6라#1차 배위권과 백본 — 주쇄는 맞다,동일,동일,NO_CSV
+sidechain_drift,coord_His_ring_drift_mean,1.89,"Angstrom, 80 models",6라#1차 배위권과 백본 — 주쇄는 맞다,동일,"동일 (ND1/NE2). 주의: 같은 원자명끼리 비교 — 고리 뒤집힘이 거리로 나타남",NO_CSV
+sidechain_drift,coord_His_ring_drift_range,1.14~2.44,"Angstrom, 80 models",6라#1차 배위권과 백본 — 주쇄는 맞다,동일,동일,NO_CSV
+sidechain_drift,rho_Thr79_CA_drift_vs_lp_dev,-0.093 (p=0.33),80 models,6라#1차 배위권과 백본 — 주쇄는 맞다,동일,Spearman,NO_CSV
+sidechain_drift,rho_coordHis_CA_drift_vs_lp_dev,-0.172 (p=0.072),80 models,6라#1차 배위권과 백본 — 주쇄는 맞다,동일,Spearman,NO_CSV
+zn_n_distance,design_static_backbone,2.11,Angstrom,7라#① Zn–N 거리,design/round_6/r6_b1_m0_ala104.pdb,"Zn에서 각 His의 ND1/NE2 중 가까운 쪽",NO_CSV
+zn_n_distance,designs_all3_within_2.5,12/16,designs,7라#① Zn–N 거리,af3/r6_day1/ 갈래C 80 cif,"설계별 5모델에서 세 His 모두 <=2.5 A",NO_CSV
+zn_n_distance,His120_escape_count,4/16,designs,7라#① Zn–N 거리,동일,동일,NO_CSV
+zn_n_distance,His120_escape_values,2.56 / 2.71 / 3.53 / 4.80,Angstrom,7라#① Zn–N 거리,동일,동일,NO_CSV
+msa_depth,design_msa_depth_range,2~53,45 designs,7라#미해결 — lone_pair_dev가 실재 신호인가,"AF3 서버 결과 zip 내 .a3m",".a3m 서열 수",NO_CSV
+msa_depth,design_msa_depth_median,21,45 designs,7라#미해결 — lone_pair_dev가 실재 신호인가,동일,동일,NO_CSV
+msa_depth,native_msa_depth,11326,1,7라#미해결 — lone_pair_dev가 실재 신호인가,of3/native_2cba/ 실행 로그,동일,NO_CSV
+msa_depth,rho_msa_depth_vs_lp_dev,+0.029 (p=0.87),45 designs,7라#미해결 — lone_pair_dev가 실재 신호인가,동일,Spearman,NO_CSV
+msa_depth,rho_msa_depth_vs_water_clash,+0.122 (p=0.49),45 designs,7라#미해결 — lone_pair_dev가 실재 신호인가,동일,Spearman,NO_CSV
+r7_backbone,waterspot_neighbors_r5_mean,6.1,11 backbones,7라#7라 백본 — 물자리에 OH 리간드,design/round_5/*.pdb,"가상 물자리 5 A 내 잔기 수",NO_CSV
+r7_backbone,waterspot_neighbors_r5_range,4~8,11 backbones,7라#7라 백본 — 물자리에 OH 리간드,동일,동일,NO_CSV
+r7_backbone,waterspot_neighbors_r7_mean,5.2,8 backbones,7라#7라 백본 — 물자리에 OH 리간드,design/round_7/*.pdb,동일,NO_CSV
+r7_backbone,waterspot_neighbors_r7_range,4~6,8 backbones,7라#7라 백본 — 물자리에 OH 리간드,동일,동일,NO_CSV
+r7_backbone,rho_crowding_vs_af3_water_clash,+0.163 (p=0.63),11 backbones,7라#★ 백본 단계 지표는 AF3 결과를 예측하지 못한다,위 + results/r5/scores_clusters_r5_2026-09-18.csv,Spearman,NO_CSV
+r7_backbone,rho_crowding_vs_af3_water_min_dist,-0.405 (p=0.22),11 backbones,7라#★ 백본 단계 지표는 AF3 결과를 예측하지 못한다,동일,Spearman,NO_CSV
+r7_backbone,rho_bb_clash_vs_af3_clash,+0.050 (p=0.88),11 backbones,7라#★ 백본 단계 지표는 AF3 결과를 예측하지 못한다,동일,Spearman,NO_CSV
+r7_backbone,rho_bb_clash_vs_af3_min_dist,+0.246 (p=0.47),11 backbones,7라#★ 백본 단계 지표는 AF3 결과를 예측하지 못한다,동일,Spearman,NO_CSV
+r7_backbone,rho_bb_min_dist_vs_af3_clash,+0.065 (p=0.85),11 backbones,7라#★ 백본 단계 지표는 AF3 결과를 예측하지 못한다,동일,Spearman,NO_CSV
+r7_backbone,rho_bb_min_dist_vs_af3_min_dist,-0.288 (p=0.39),11 backbones,7라#★ 백본 단계 지표는 AF3 결과를 예측하지 못한다,동일,Spearman,NO_CSV
+r6_cluster,thr_CA_drift_b1_m0,3.47,Angstrom,6라#백본 게이트 검증 — 역방향이었다,design/round_5/r5_b1_m0.pdb,"전체 Kabsch 정렬 후 Thr CA 거리",NO_CSV
+r6_cluster,rho_drift_vs_clash,-0.142 (p=0.018),275 models,6라#백본 게이트 검증 — 역방향이었다,위 + results/r5/scores_clusters_r5_2026-09-18.csv,Spearman,NO_CSV
+r6_mpnn,activesite_entropy_104,0.00,100 seqs,6라#6라 실행,LigandMPNN/outputs/round6_b1_m0_deep/seqs/,"활성부위 10 A 내 위치별 Shannon 엔트로피",NO_CSV
+r6_mpnn,activesite_entropy_78,0.50,100 seqs,6라#6라 실행,동일,동일,NO_CSV
+r6_mpnn,activesite_entropy_106,1.99,100 seqs,6라#6라 실행,동일,동일,NO_CSV
+r6_mpnn,ligand_confidence_ala104,0.5863,50 seqs,6라#실행,LigandMPNN/outputs/round6_b1_m0_ala104/,MPNN 출력 파싱,NO_CSV
+r6_mpnn,ligand_confidence_deep,0.5818,100 seqs,6라#실행,LigandMPNN/outputs/round6_b1_m0_deep/,동일,NO_CSV
+two_axis,rho_lp_mean_vs_probe_mean,-0.291 (p=0.274),16 designs,7라#두 축이 겹치지 않는다 (가설),results/r6/scores_r6_day1_2026-09-21.csv,"설계별 5모델 평균 후 Spearman",recomputable
+two_axis,top6_overlap,0,16 designs,7라#두 축이 겹치지 않는다 (가설),동일,"lp_mean 하위 6 vs probe_mean 하위 6 교집합. 초기하 p=0.026 (k 사후선택)",recomputable

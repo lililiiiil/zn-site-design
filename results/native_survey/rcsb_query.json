@@ -1,0 +1,5 @@
+{"query":{"type":"group","logical_operator":"and","nodes":[
+{"type":"terminal","service":"text","parameters":{"attribute":"rcsb_nonpolymer_instance_annotation.comp_id","operator":"exact_match","value":"ZN"}},
+{"type":"terminal","service":"text","parameters":{"attribute":"rcsb_entry_info.resolution_combined","operator":"less_or_equal","value":1.8}},
+{"type":"terminal","service":"text","parameters":{"attribute":"exptl.method","operator":"exact_match","value":"X-RAY DIFFRACTION"}}
+]},"return_type":"entry","request_options":{"paginate":{"start":0,"rows":300},"results_content_type":["experimental"]}}

@@ -8,3 +8,14 @@ folding_env/
 af3/**/msas/
 af3/**/*_confidences.json
 af3/**/*_full_data_*.json
+# of3 (OpenFold3) — af3 와 같은 정책. of3 가 나중에 생겨 규칙에서 빠져 있었다.
+# PAE 행렬(*_confidences.json, 0.57~0.68 MB x 64)과 MSA 는 안 올린다.
+# 요약값은 *_ranking_scores.csv 와 *_summary_* 에 남으므로 손실이 아니다.
+of3/**/msas/
+of3/**/*_confidences.json
+# 크기 이상치 하나만. 나머지 *_data.json 은 0.00~0.35 MB 라 통째로 거르지 않는다.
+of3/native_msa_2026-09-28/af3_output/native_msa_87621/native_msa_87621_data.json
+
+# AF3 다운로드 묶음 — af3/r5_day1·r5_day2 에 전부 추출돼 있어 중복이고(누락 0),
+# 안에 위에서 제외한 msas/ 와 *_full_data_*.json 이 들어 있다.
+af3/**/*.zip

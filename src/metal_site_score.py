@@ -321,6 +321,38 @@ def build_ref(path, site):
 
 
 # ── 정렬·필터·출력 ────────────────────────────────────────────────────
+# CSV 컬럼 '순서'만 고정한다. 목록이 아니라 순서다 — 여기 없는 키도 CSV 에는
+# 반드시 들어가고, 뒤에 붙는다. 예전엔 이게 고정 목록 + extrasaction="ignore"
+# 였고, site_function.py 에 지표를 추가해도 CSV 에서 조용히 사라졌다.
+# 새 지표를 앞쪽에 놓고 싶을 때만 이 목록을 건드리면 된다.
+CSV_ORDER = ["pdb", "ok", "coord_atoms", "coord_rmsd_vs_ref", "pair_dist_rmsd_vs_ref",
+             "metal_fit_residual", "angle_rmsd", "lone_pair_dev",
+             "water_clash", "water_min_dist", "water_blocker",
+             "shell_hbond_n", "shell_hbond_dist", "shell_hbond_angle",
+             "shell_hbond_resid", "probe_dist", "probe_resid",
+             "pocket_hydrophobic", "pocket_polar",
+             "pocket_ratio", "escape_frac",
+             "metal_source", "nb_status", "pass"]
+
+
+def csv_columns(rows, order=None):
+    """order 전체 + rows 에만 있는 키를 뒤에 붙인 컬럼 목록.
+
+    order 는 '한 행도 안 채웠더라도' 전부 넣는다. 헤더가 데이터에 따라
+    달라지면 --ref 를 줬는지, 전부 실패했는지에 따라 CSV 모양이 바뀌어
+    (최악의 경우 pdb,ok 두 칸) 바깥에서 비교를 못 한다. 빈 칸으로 남는 건
+    예전 고정 목록도 그랬으므로 달라지는 게 없다.
+
+    행마다 키가 다르다(ok=False 행은 pdb/ok 만). 그래서 첫 행이 아니라
+    전체를 훑는다. dict.fromkeys 로 첫 등장 순서를 보존한다 — set 을 쓰면
+    추가 컬럼 순서가 실행마다 달라져 CSV diff 가 못 쓰게 된다.
+    """
+    order = CSV_ORDER if order is None else order
+    known = set(order)
+    return list(order) + [k for k in dict.fromkeys(
+        k for r in rows for k in r) if k not in known]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("pdbs", nargs="+", help="설계 PDB들 (glob 가능)")
@@ -374,11 +406,13 @@ def main():
     for r in good:
         r["pass"] = passes(r)
 
-    # 콘솔 표
+    # 콘솔 표. 이쪽은 CSV 와 달리 '선별'이 맞다 — 터미널 폭이 한정돼 있다.
+    # 완전한 기록은 --out CSV 쪽이고, 거기엔 모든 키가 자동으로 들어간다.
+    # 그래서 새 지표를 콘솔에서도 보고 싶으면 이 목록에 직접 넣어야 한다.
     cols = ["pdb","nb_status","probe_dist","probe_resid", "coord_atoms",
             "coord_rmsd_vs_ref", "pair_dist_rmsd_vs_ref","metal_fit_residual",
             "angle_rmsd", "lone_pair_dev", "water_clash","escape_frac",
-              "shell_hbond_n", "metal_source", "pass"]
+              "co2_open_frac", "shell_hbond_n", "metal_source", "pass"]
 
     
     cols = [c for c in cols if any(c in r for r in good)]
@@ -399,19 +433,20 @@ def main():
 
     if args.out:
         import csv
-        allcols = ["pdb", "ok", "coord_atoms", "coord_rmsd_vs_ref", "pair_dist_rmsd_vs_ref",
-                   "metal_fit_residual", "angle_rmsd", "lone_pair_dev",
-                   "water_clash", "water_min_dist", "water_blocker",
-                   "shell_hbond_n", "shell_hbond_dist", "shell_hbond_angle",
-                   "shell_hbond_resid", "probe_dist", "probe_resid",
-                   "pocket_hydrophobic", "pocket_polar",
-                   "pocket_ratio", "escape_frac", "metal_source", "nb_status", "pass"]
+        allcols = csv_columns(rows)
         with open(args.out, "w", newline="") as fh:
-            wtr = csv.DictWriter(fh, fieldnames=allcols, extrasaction="ignore")
+            # extrasaction 을 쓰지 않는다. fieldnames 가 rows 의 키 전체를
+            # 덮으므로 '남는 키'가 나올 수 없고, 혹시 나오면 조용히 버리는
+            # 대신 터지는 게 맞다 — 그게 원래 사고였다.
+            # restval: ok=False 행은 pdb/ok 만, pass 는 평가된 행에만 있다.
+            wtr = csv.DictWriter(fh, fieldnames=allcols, restval="")
             wtr.writeheader()
             for r in rows:
                 wtr.writerow(r)
-        print(f"CSV 저장: {args.out}")
+        print(f"CSV 저장: {args.out}  (컬럼 {len(allcols)}개)")
+        new = [c for c in allcols if c not in set(CSV_ORDER)]
+        if new:
+            print(f"  CSV_ORDER 에 없어 뒤에 붙인 컬럼: {', '.join(new)}")
 
 if __name__ == "__main__":
     main()

@@ -16,7 +16,7 @@ import sys
 import numpy as np
 import site_function as sf
 import json
-PASS, FAIL = [], []
+PASS, FAIL, SKIP = [], [], []
 
 
 # ── 합성 자리 만들기 ──────────────────────────────────────────────────
@@ -238,13 +238,22 @@ def main():
             native_check(sys.argv[1])
         except Exception as e:
             FAIL.append(("native_check", f"{type(e).__name__}: {e}"))
+    else:
+        # 인자를 빼면 native 검수 3개가 조용히 안 돌고 25 대신 22 가 나온다.
+        # 그걸 '통과'로 읽고 변경이 안전하다고 판단한 사고가 한 번 있었다
+        # (2026-10-01). 건너뛴 걸 눈에 보이게 적는다.
+        SKIP.append("native 검수 3개 — PDB 인자를 안 줬다. "
+                    "정식 호출: python src/test_site_function.py reference/2cba.pdb")
 
     print()
+    for name in SKIP:
+        print(f"  … 건너뜀: {name}")
     for name, detail in FAIL:
         print(f"  ✗ {name}" + (f"  — {detail}" if detail else ""))
     for name, _ in PASS:
         print(f"  ✓ {name}")
-    print(f"\n{len(PASS)} 통과 / {len(FAIL)} 실패")
+    print(f"\n{len(PASS)} 통과 / {len(FAIL)} 실패"
+          + (f" / {len(SKIP)} 건너뜀 ← 전체를 돌린 게 아니다" if SKIP else ""))
     return 1 if FAIL else 0
 
 

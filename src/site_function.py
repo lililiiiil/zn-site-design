@@ -9,6 +9,7 @@ metal_site_score.py 의 (A)~(D)는 Zn을 얼마나 잘 '잡는가'만 본다.
   2. 2차 배위권 (Thr199 등가물)                → second_shell()
   3. 소수성 기질 포켓 (CO2 도킹)               → substrate_pocket()
   4. 벌크 용매 통로 (양성자 배출)              → solvent_access()
+  5. CO2 가 앉을 공간이 비었는가               → co2_open_frac()
 
 사용:
   import site_function as sf
@@ -286,7 +287,7 @@ def probe_distance(nb, atoms, site):
       probe_resid 가 "" 인지 "missing" 인지로 '설정 안 함'과 '못 찾음'을 구분한다.
     """
     empty = {"probe_dist": "", "probe_resid": ""}
-    p = site.get("probe") if isinstance(site, dict) else None
+    p = site.get("probe") if isinstance(site, dict) else NameError
     if not p:
         return empty                       # probe 미설정 — 옛 site JSON 과 호환
     if nb is None:
@@ -360,6 +361,67 @@ def solvent_access(atoms, coords, metal_xyz, n_rays=128, reach=10.0, step=0.5):
     return {"escape_frac": float((~blocked.any(axis=1)).mean())}
 
 
+# ── 5. CO2 기질 자리 ──────────────────────────────────────────────────
+# substrate_pocket() 은 '주변이 소수성인가'만 센다. 소수성 벽이 멀쩡해도
+# 그 사이 공간이 메워져 있으면 CO2 는 못 들어간다. 아래는 공간 자체를 잰다.
+#
+# 파라미터 출처: PDB 3D92 (야생형 hCA II + CO2, 1.1 Å, 반응 전 복합체).
+#   O(친핵체)–C(CO2)        2.79 Å
+#   ∠Zn–O(친핵체)···C(CO2)  103.1°
+R_OC = 2.79             # 친핵체 산소 → CO2 탄소 거리
+ANG_OC = 103.1          # Zn–친핵체–탄소 각도
+ANG_TOL = 15.0          # 각도 창 절반폭
+R_CO2_C = VDW["C"]      # CO2 탄소도 그냥 탄소다
+
+# 구면 표본수. 2000 은 부족하다 — 각도 창이 전체 구면의 25% 라 후보점이
+# 500개밖에 안 남고, 2CBA 에서 n=500~4000 사이 값이 0.092~0.101 로 흔들린다.
+# 20000 부터 0.0951/0.0943/0.0944/0.0948 (n=2e4/4e4/8e4/1.6e5) 로 ±0.001 안에
+# 수렴하고 구조 하나당 0.5초다. 수렴값 0.095 는 3점 교정의 2CBA 값과 같다.
+N_CO2_PTS = 20000
+
+
+def co2_open_frac(atoms, coords, metal_xyz, n_pts=N_CO2_PTS, tol=ANG_TOL):
+    """CO2 탄소가 앉을 수 있는 자리의 비율(0~1). 못 재면 -1.
+
+    친핵체는 실측 OH- 가 아니라 가상 4번째 꼭짓점을 쓴다. 설계 모델에는
+    물이 없어서 선택지가 없고, 그래서 기준선(결정구조·native 예측)도 같은
+    가상 꼭짓점으로 재야 비교가 성립한다. 3D92 에서 가상 꼭짓점과 실측
+    OH- 의 어긋남은 0.37 Å.
+
+    물·헤테로 원자는 센 대상에서 빠진다(_protein 이 ATOM 만 고른다).
+    AF3 출력에 물이 없으므로 결정구조 쪽 조건을 거기에 맞춘 것이다.
+
+    배위원자 자신은 빼지 않는다(drop_self=False) — His 고리는 실제로
+    기질 자리의 벽 한 면이다. solvent_access() 와 같은 이유.
+    """
+    out = {"co2_open_frac": -1.0, "co2_n_cand": 0}
+    wp = _water_pos(coords, metal_xyz)
+    if wp is None:
+        return out
+    nuc, w = wp              # w = Zn→친핵체 단위벡터
+
+    # 친핵체에서 본 후보 방향 중, Zn 쪽(-w)과 103.1°±tol 를 이루는 것만.
+    # cos 는 각도에 대해 감소함수라 lo/hi 가 뒤집힌다.
+    dirs = fibonacci_sphere(n_pts)
+    cosang = dirs @ (-w)
+    lo = np.cos(np.radians(ANG_OC + tol))
+    hi = np.cos(np.radians(ANG_OC - tol))
+    cand = nuc + R_OC * dirs[(cosang >= lo) & (cosang <= hi)]
+    out["co2_n_cand"] = int(len(cand))
+    if len(cand) == 0:
+        return out
+
+    prot, P = _protein(atoms, coords, drop_self=False)
+    if len(P) == 0:
+        out["co2_open_frac"] = 1.0
+        return out
+
+    cut = np.array([R_CO2_C + VDW.get(a["elem"], VDW["C"]) for a in prot])
+    d = np.linalg.norm(cand[:, None, :] - P[None, :, :], axis=2)
+    out["co2_open_frac"] = float((~(d < cut[None, :]).any(axis=1)).mean())
+    return out
+
+
 # ── 통합  ─────────────────────────────────
 def function_metrics(atoms, coords, metal_xyz, site):
     nb = classify_neighbors(atoms, coords, metal_xyz)
@@ -369,6 +431,7 @@ def function_metrics(atoms, coords, metal_xyz, site):
     out.update(probe_distance(nb, atoms, site))
     out.update(substrate_pocket(atoms, coords, metal_xyz))
     out.update(solvent_access(atoms, coords, metal_xyz))
+    out.update(co2_open_frac(atoms, coords, metal_xyz))
     # 분류 자체가 불가능했는지를 한 컬럼으로 남긴다. water_clash == -1 과
     # 중복이지만, shell_hbond_n 은 '폴백'과 '진짜 2차 배위권 없음'이 둘 다 0 이라
     # 값만으로 구분할 수 없다. 분석 전에 이 컬럼부터 세고 시작할 것.
@@ -390,7 +453,7 @@ if __name__ == "__main__":
     cols = ["water_clash", "water_min_dist", "water_blocker",
             "shell_hbond_n", "shell_hbond_dist", "shell_hbond_angle",
             "shell_hbond_resid", "probe_dist", "probe_resid",
-            "pocket_ratio", "escape_frac", "nb_status"]
+            "pocket_ratio", "escape_frac", "co2_open_frac", "nb_status"]
     files = [f for p in sys.argv[1:] for f in sorted(glob.glob(p))]
     if not files:
         sys.exit("입력 PDB 없음.  사용:  python site_function.py <renum.pdb> ...")

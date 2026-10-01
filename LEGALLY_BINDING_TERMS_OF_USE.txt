@@ -1,0 +1,36 @@
+This information is subject to AlphaFold Server Output Terms of Use found at
+alphafoldserver.com/output-terms
+
+
+적용 범위
+---------
+이 저장소에는 AlphaFold Server (alphafoldserver.com) 출력과, 그 출력에서
+계산한 파생물이 들어 있다.
+
+  출력      af3/**  의 예측 구조(*.cif)와 신뢰도 json
+  파생물    results/**  의 채점 CSV — 위 구조에서 계산한 기하·기능 지표
+            design/**  의 분석 산출물
+
+AlphaFold Server Output Terms of Use 4.1 항은, 출력이나 파생물을 약관 고지
+없이 배포할 경우 위 문구를 담은 "Legally Binding Terms of Use" 파일을 함께
+배포하도록 요구한다. 이 파일이 그것이다.
+
+r2~r4 다운로드에는 폴더마다 terms_of_use.md 가 포함돼 있다. r5 이후
+다운로드에는 없으므로 이 파일이 저장소 전체를 덮는다.
+
+주요 사용 제한 (전문은 위 링크, 또는 af3/r2_id05_holo/terms_of_use.md)
+-----------------------------------------------------------------------
+1. 비상업적 사용만. 상업 조직을 위한 연구도 포함된다. 과학 논문·오픈소스
+   공개·저널리즘을 통한 간접적인 경우는 예외다.
+2. 단백질과 리간드·펩타이드의 **결합이나 상호작용을 예측하는 자동 시스템**에
+   쓰지 말 것 (Glide, AutoDock 등).
+3. AlphaFold 류의 생체분자 구조예측 ML 모델 학습에 쓰지 말 것.
+4. 출력·파생물을 배포할 때 이 약관 고지를 눈에 띄게 함께 제공할 것.
+
+2 항에 대한 이 저장소의 입장
+-----------------------------
+`src/site_function.py` 의 지표들은 결합이나 친화도를 예측하지 않는다.
+`co2_open_frac` 은 CO2 탄소가 앉을 수 있는 자리가 입체적으로 비어 있는지
+세는 것이고(막힌 후보점 비율), `escape_frac` 은 용매 통로의 개방도를 센다.
+둘 다 공간 기하 측정이며 결합 포즈·결합에너지·리간드 순위를 내지 않는다.
+도킹 프로그램을 쓰지 않고, 출력을 도킹 입력으로 넘기지도 않는다.

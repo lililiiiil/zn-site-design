@@ -1,0 +1,22 @@
+Running job rfd3_r8_lean_co2oh_thr-ca_mimic_r8_lean_co2oh_thr_designbatch_1
+Running: rfd3 design out_dir=/home/ubuntu/out inputs=/home/ubuntu/config.json diffusion_batch_size=8 n_batches=1 ckpt_path=/weights/rfd3_latest.ckpt inference_sampler.step_scale=1.5 inference_sampler.gamma_0=0.6
+/app/foundry/.venv/lib/python3.12/site-packages/hydra/_internal/config_loader_impl.py:216: UserWarning: provider=hydra.searchpath in main, path=configs is not available.
+  warnings.warn(
+04:17:46 DEBUG transforms: Debug mode is on
+04:17:48 INFO rfd3.engine: [rank: 0] Outputs will be written to /home/ubuntu/out.
+04:17:48 INFO rfd3.engine: [rank: 0] Found 0 existing example IDs in the output directory (0 total).
+Using bfloat16 Automatic Mixed Precision (AMP)
+You are using a CUDA device ('NVIDIA L40S') that has Tensor Cores. To properly utilize them, you should set `torch.set_float32_matmul_precision('medium' | 'high')` which will trade-off precision for performance. For more details, read https://pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html#torch.set_float32_matmul_precision
+04:17:57 WARNING atomworks.io: We can't fix formal charges without building from templates, as we need to know the true number of hydrogens bonded to a given atom, not the inferred number. This may lead to occasional inaccuracies after adding inter-residue bonds. To avoid this and fix formal charges, set `add_missing_atoms = True`.
+04:17:58 WARNING atomworks.io: Chain A contains both polymer and non-polymer residues; separating them for processing, naming the non-polymer residues as B.
+04:17:58 WARNING atomworks.io: The `extra_fields` argument will be ignored if there is no CIF file input.
+04:17:59 WARNING atomworks.io.utils.ccd: No suitable coordinates found for 'ZN' among preferences ('ideal_pdbx', 'model', 'ideal_rdkit'). Coordinates will be 'nan'.
+04:18:54 INFO rfd3.engine: [rank: 0] Finished inference batch in 55.11 seconds.
+04:18:54 INFO rfd3.engine: [rank: 0] Outputs for config_ca_mimic_r8_lean_co2oh_thr_0_model_0 written to /home/ubuntu/out/config_ca_mimic_r8_lean_co2oh_thr_0_model_0.
+04:18:55 INFO rfd3.engine: [rank: 0] Outputs for config_ca_mimic_r8_lean_co2oh_thr_0_model_1 written to /home/ubuntu/out/config_ca_mimic_r8_lean_co2oh_thr_0_model_1.
+04:18:55 INFO rfd3.engine: [rank: 0] Outputs for config_ca_mimic_r8_lean_co2oh_thr_0_model_2 written to /home/ubuntu/out/config_ca_mimic_r8_lean_co2oh_thr_0_model_2.
+04:18:55 INFO rfd3.engine: [rank: 0] Outputs for config_ca_mimic_r8_lean_co2oh_thr_0_model_3 written to /home/ubuntu/out/config_ca_mimic_r8_lean_co2oh_thr_0_model_3.
+04:18:55 INFO rfd3.engine: [rank: 0] Outputs for config_ca_mimic_r8_lean_co2oh_thr_0_model_4 written to /home/ubuntu/out/config_ca_mimic_r8_lean_co2oh_thr_0_model_4.
+04:18:55 INFO rfd3.engine: [rank: 0] Outputs for config_ca_mimic_r8_lean_co2oh_thr_0_model_5 written to /home/ubuntu/out/config_ca_mimic_r8_lean_co2oh_thr_0_model_5.
+04:18:55 INFO rfd3.engine: [rank: 0] Outputs for config_ca_mimic_r8_lean_co2oh_thr_0_model_6 written to /home/ubuntu/out/config_ca_mimic_r8_lean_co2oh_thr_0_model_6.
+04:18:55 INFO rfd3.engine: [rank: 0] Outputs for config_ca_mimic_r8_lean_co2oh_thr_0_model_7 written to /home/ubuntu/out/config_ca_mimic_r8_lean_co2oh_thr_0_model_7.

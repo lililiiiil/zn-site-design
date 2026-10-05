@@ -1,0 +1,85 @@
+{
+    "diffused_index_map": {
+        "A92": "A133",
+        "A94": "A108",
+        "A96": "A96",
+        "A106": "A72",
+        "A117": "A112",
+        "A119": "A109",
+        "A199": "A78",
+        "A209": "A80"
+    },
+    "metrics": {
+        "join_point_rmsd_by_token": {
+            "A92": 0.7369193434715271,
+            "A94": 0.8331012725830078,
+            "A96": 0.9575883746147156,
+            "A106": 5.233215808868408,
+            "A117": 1.7391486167907715,
+            "A119": 0.2708771824836731,
+            "A199": 3.9323418140411377,
+            "A209": 1.302282691001892
+        },
+        "insertion.mae": 2.6021272987127304,
+        "insertion.rmcd": 1.820293590426445,
+        "insertion_rmsd": 1.8881455212831497,
+        "join_point_rmsd": 1.8756843879818916,
+        "n_conjoined_residues": 1,
+        "max_ca_deviation": 0.05848383903503418,
+        "n_chainbreaks": 0,
+        "n_clashing.interresidue_clashes_w_sidechain": 1,
+        "n_clashing.interresidue_clashes_w_backbone": 0,
+        "n_clashing.ligand_clashes": 0,
+        "n_clashing.ligand_min_distance": 2.9397523403167725,
+        "non_loop_fraction": 0.7230046948356808,
+        "loop_fraction": 0.27699530516431925,
+        "helix_fraction": 0.5915492957746479,
+        "sheet_fraction": 0.13145539906103287,
+        "num_ss_elements": 15,
+        "radius_of_gyration": 16.09059484479542,
+        "alanine_content": 0.3051643192488263,
+        "glycine_content": 0.06103286384976526,
+        "num_residues": 213,
+        "diffused_com": [
+            -1.548678994178772,
+            -0.47639620304107666,
+            0.43872755765914917
+        ],
+        "fixed_com": [
+            0.0004087935958523303,
+            0.0005337027832865715,
+            -0.001007789745926857
+        ]
+    },
+    "specification": {
+        "input": "/home/ubuntu/input_0.pdb",
+        "unindex": "A92,A94,A96,A106,A117,A119,A199,A209",
+        "length": "150-220",
+        "ligand": "ZN,CO2,OH",
+        "allow_ligand_on_existing_chain": true,
+        "extra": {
+            "example": "ca_mimic_r8_lean_co2oh",
+            "task_name": "config_ca_mimic_r8_lean_co2oh",
+            "sampled_contig": "213P",
+            "num_tokens_in": 224,
+            "num_residues_in": 224,
+            "num_chains": 2,
+            "num_atoms": 1108,
+            "num_residues": 226,
+            "example_id": "config_ca_mimic_r8_lean_co2oh_0"
+        },
+        "select_fixed_atoms": {
+            "A92": "TIP",
+            "A94": "TIP",
+            "A96": "TIP",
+            "A106": "TIP",
+            "A117": "TIP",
+            "A119": "TIP",
+            "A199": "TIP",
+            "A209": "TIP"
+        },
+        "select_unfixed_sequence": false
+    },
+    "ckpt_path": "/weights/rfd3_latest.ckpt",
+    "seed": null
+}

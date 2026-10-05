@@ -19,3 +19,7 @@ of3/native_msa_2026-09-28/af3_output/native_msa_87621/native_msa_87621_data.json
 # AF3 다운로드 묶음 — af3/r5_day1·r5_day2 에 전부 추출돼 있어 중복이고(누락 0),
 # 안에 위에서 제외한 msas/ 와 *_full_data_*.json 이 들어 있다.
 af3/**/*.zip
+
+# RFD3 출력의 .pdb 는 같은 폴더 .cif 와 동일 구조의 다른 형식이다 (원자수 일치).
+# 채점기가 .cif 를 직접 읽으므로 cif 쪽만 남긴다. combined_pdbs.pdb 도 모아둔 것.
+rfd3/r8_out/**/*.pdb
